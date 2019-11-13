@@ -1,5 +1,5 @@
 CC=g++
-CARGS= -pthread --std=c++17 -lavcodec -lavformat -lavutil -lavdevice
+CARGS= -pthread --std=c++17 -lavcodec -lavformat -lavutil -lavdevice -lswscale
 FILES=screen_capture.h screen_capture.cpp main.cpp
 OUT_NAME=linux_ambilight
 
