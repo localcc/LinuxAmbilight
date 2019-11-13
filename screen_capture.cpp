@@ -56,11 +56,36 @@ void screen_capture::init_capture() {
 	}
 
 
+
+}
+
+
+int screen_capture::convert_frame(AVFrame* frame, AVFrame* out_frame) {
+	int res = 0;
+	SwsContext* converter_context = NULL;
+	converter_context = sws_getCachedContext(converter_context, frame->width, frame->height, codec_context->pix_fmt,
+			frame->width, frame->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+	if(!converter_context) {
+		printf("Failed to allocate converter context!\n");
+		return -1;
+	}
+	sws_scale(converter_context, frame->data, frame->linesize, 0, frame->height, out_frame->data, out_frame->linesize);
+	av_frame_unref(frame);
+	if(res < 0){
+		return res;
+	}
+	if(out_frame == NULL){
+		printf("Failed to convert, cleaning up!\n");
+		return -2;
+	}
+	sws_freeContext(converter_context);
+	return 0;
 }
 
 void screen_capture::start_capture() {
 	AVFrame* frame = av_frame_alloc();
        	AVPacket* packet = av_packet_alloc();
+	AVFrame* rgb_frame = av_frame_alloc();
 	int result = 0;
 	while(av_read_frame(format_context, packet) > -1) {
 		result = avcodec_send_packet(codec_context, packet);
@@ -74,6 +99,8 @@ void screen_capture::start_capture() {
 			printf("Codec failure!\n");
 			continue;
 		}
+		av_packet_unref(packet);
+
 		result = avcodec_receive_frame(codec_context, frame);
 		if(result == AVERROR(EAGAIN)) {
 			continue;
@@ -85,6 +112,17 @@ void screen_capture::start_capture() {
 			continue;
 		}
 
+		av_image_alloc(rgb_frame->data, rgb_frame->linesize, codec_context->width, codec_context->height, AV_PIX_FMT_RGB24, 1);
+	
+
+		if(convert_frame(frame, rgb_frame) < 0) {
+			printf("Failed to convert frame!\n");
+			continue;
+		}
+		av_freep(&rgb_frame->data[0]);
+	
+		
+	
 	}	
 }
 
